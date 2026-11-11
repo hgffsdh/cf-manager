@@ -1,0 +1,38 @@
+# Development/demo stack. Fresh demo database uses EnsureCreated; DO NOT use this path on existing production data.
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${SQL_SA_PASSWORD:?Set SQL_SA_PASSWORD in .env}
+    volumes:
+      - mssql-data:/var/opt/mssql
+    ports:
+      - "14333:1433"
+  backend:
+    build: ./backend
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Server=db,1433;Database=MocCafeDB;User Id=sa;Password=${SQL_SA_PASSWORD};Encrypt=True;TrustServerCertificate=True;"
+      Jwt__Key: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      Jwt__Issuer: MocCafe
+      Jwt__Audience: MocCafeWeb
+      Seed__Enabled: "true"
+      Seed__AdminEmail: ${ADMIN_EMAIL:?Set ADMIN_EMAIL in .env}
+      Seed__AdminPassword: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      Bootstrap__EnsureCreated: "true"
+      PublicFrontendUrl: ${PUBLIC_FRONTEND_URL:-http://localhost:8082}
+      Cors__Origins: ${PUBLIC_FRONTEND_URL:-http://localhost:8082}
+    depends_on:
+      - db
+    restart: on-failure
+    ports:
+      - "5088:8080"
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "8082:80"
+volumes:
+  mssql-data:

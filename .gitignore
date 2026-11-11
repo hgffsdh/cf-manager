@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+.env
+.env.*
+!.env.example
+**/appsettings.Production.json
+**/appsettings.Local.json
+*.user
+*.suo

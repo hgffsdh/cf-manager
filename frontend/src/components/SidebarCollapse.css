@@ -1,0 +1,506 @@
+
+/* ============================================
+   MOC CAFE OS - SMART AUTO SIDEBAR
+   Desktop: Hover to expand
+   Mobile: Slide-out navigation
+   ============================================ */
+
+.moc-shell {
+  --moc-sidebar-collapsed-width: 78px;
+  --moc-sidebar-expanded-width: 275px;
+  --moc-sidebar-duration: 280ms;
+  --moc-sidebar-easing: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ============================================
+   SIDEBAR BASE
+   ============================================ */
+
+.moc-shell > .sidebar {
+  width: var(--moc-sidebar-expanded-width);
+  min-width: 0;
+  overflow-x: hidden;
+
+  transition:
+    width var(--moc-sidebar-duration) var(--moc-sidebar-easing),
+    padding var(--moc-sidebar-duration) var(--moc-sidebar-easing),
+    box-shadow var(--moc-sidebar-duration) ease;
+}
+
+/* Remove the old desktop toggle entirely */
+.moc-shell .moc-sidebar-toggle {
+  display: none !important;
+}
+
+/* ============================================
+   SIDEBAR HEADER
+   ============================================ */
+
+.moc-sidebar-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.moc-sidebar-heading > .logo {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 30px;
+}
+
+.moc-sidebar-heading .logo-mark {
+  flex-shrink: 0;
+}
+
+/* ============================================
+   NAVIGATION
+   ============================================ */
+
+.moc-shell .side-links {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 15px;
+}
+
+.moc-shell .side-links::-webkit-scrollbar {
+  width: 5px;
+}
+
+.moc-shell .side-links::-webkit-scrollbar-thumb {
+  background: #d9e6db;
+  border-radius: 12px;
+}
+
+.moc-shell .side-link {
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.moc-shell .side-link:hover {
+  background-color: rgba(35, 125, 85, 0.10);
+}
+
+/* ============================================
+   COLLAPSED DESKTOP SIDEBAR
+   ============================================ */
+
+@media (min-width: 831px) {
+
+  .moc-sidebar-collapsed > .sidebar {
+    width: var(--moc-sidebar-collapsed-width);
+    padding: 25px 9px;
+  }
+
+  .moc-sidebar-collapsed .moc-sidebar-heading {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .moc-sidebar-collapsed .moc-sidebar-heading > .logo {
+    padding: 0;
+    justify-content: center;
+  }
+
+  .moc-sidebar-collapsed .moc-sidebar-heading .logo-mark {
+    width: 45px;
+    height: 45px;
+  }
+
+  .moc-sidebar-collapsed .logo > div,
+  .moc-sidebar-collapsed .side-label,
+  .moc-sidebar-collapsed .side-link span,
+  .moc-sidebar-collapsed .status-live span {
+    display: none !important;
+  }
+
+  .moc-sidebar-collapsed .side-link {
+    justify-content: center;
+    padding: 14px 10px;
+    gap: 0;
+  }
+
+  .moc-sidebar-collapsed .status-live {
+    justify-content: center;
+    padding: 12px 0;
+  }
+
+  .moc-sidebar-collapsed .sidebar-bottom .logout {
+    display: flex;
+    justify-content: center;
+    padding: 12px 0;
+  }
+
+  .moc-shell > .sidebar:hover {
+    box-shadow: 8px 0 28px rgba(20, 70, 45, 0.08);
+  }
+}
+
+/* ============================================
+   TOPBAR
+   ============================================ */
+
+.moc-topbar-start {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+/* ============================================
+   MOBILE CONTROLS
+   ============================================ */
+
+.moc-sidebar-close-mobile,
+.moc-mobile-trigger {
+  display: none;
+  place-items: center;
+
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+
+  border: 1px solid #dde9e0;
+  border-radius: 11px;
+
+  background: #f5faf5;
+  color: #34664d;
+
+  cursor: pointer;
+}
+
+.moc-sidebar-close-mobile:hover,
+.moc-mobile-trigger:hover {
+  background: #e4f0e7;
+}
+
+.moc-sidebar-backdrop {
+  display: none;
+}
+
+/* ============================================
+   MOBILE DRAWER
+   ============================================ */
+
+@media (max-width: 830px) {
+
+  .moc-shell > .sidebar,
+  .moc-sidebar-collapsed > .sidebar {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+
+    width: 275px !important;
+    height: 100vh;
+    height: 100dvh;
+
+    z-index: 1004;
+    padding: 24px 16px !important;
+
+    transform: translateX(-105%);
+
+    transition: transform 230ms ease;
+
+    box-shadow: 12px 0 45px rgba(30, 79, 53, 0.19);
+  }
+
+  .moc-mobile-open > .sidebar {
+    transform: translateX(0);
+  }
+
+  /* Always display full navigation on mobile */
+  .moc-sidebar-collapsed .moc-sidebar-heading {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .moc-shell .sidebar .logo > div,
+  .moc-shell .sidebar .side-label {
+    display: block !important;
+  }
+
+  .moc-shell .sidebar .side-link span,
+  .moc-shell .sidebar .status-live span {
+    display: inline !important;
+  }
+
+  .moc-shell .sidebar .side-link {
+    justify-content: flex-start;
+    gap: 13px;
+    padding: 13px 15px;
+  }
+
+  .moc-shell .sidebar .sidebar-bottom .logout {
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  .moc-sidebar-close-mobile,
+  .moc-mobile-trigger {
+    display: grid;
+  }
+
+  .moc-sidebar-backdrop {
+    display: block;
+
+    position: fixed;
+    inset: 0;
+
+    z-index: 1003;
+
+    border: 0;
+    background: rgba(19, 47, 37, 0.53);
+
+    cursor: pointer;
+  }
+
+  .moc-topbar-start {
+    gap: 11px;
+  }
+
+  .moc-topbar-start .crumb,
+  .moc-topbar-start .crumb-slash {
+    display: none;
+  }
+
+  .moc-shell .sidebar .logo {
+    padding-bottom: 27px;
+  }
+
+  .moc-shell .sidebar .side-links {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .moc-shell .sidebar .sidebar-bottom {
+    margin-top: 10px;
+  }
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .moc-shell > .sidebar {
+    transition: none !important;
+  }
+}
+
+/* ============================================
+   MOC CAFE OS - INTERACTIVE TOPBAR
+   ============================================ */
+
+.moc-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.moc-header-control {
+  position: relative;
+}
+
+.moc-header-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  font: inherit;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.moc-header-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(25, 75, 45, 0.12);
+}
+
+.moc-header-button:focus-visible {
+  outline: 2px solid #278451;
+  outline-offset: 3px;
+}
+
+.moc-header-button[aria-expanded="true"] {
+  box-shadow: 0 0 0 3px rgba(39, 132, 81, 0.12);
+}
+
+.moc-header-popover {
+  position: absolute;
+  top: calc(100% + 14px);
+  right: 0;
+  z-index: 1100;
+
+  width: min(330px, calc(100vw - 28px));
+  padding: 18px;
+
+  color: #234735;
+  background: #fff;
+  border: 1px solid #e0ebe2;
+  border-radius: 18px;
+
+  box-shadow: 0 18px 50px rgba(22, 62, 40, 0.16);
+  animation: mocPopoverIn 0.2s ease both;
+}
+
+.moc-popover-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.moc-header-popover p {
+  margin: 0 0 14px;
+  color: #66776c;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.moc-popover-note {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f5f8f5;
+  font-size: 12px !important;
+}
+
+.moc-live-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px;
+  margin-bottom: 14px;
+  background: #eff8f1;
+  border: 1px solid #dceee0;
+  border-radius: 12px;
+  color: #278451;
+}
+
+.moc-live-status > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.moc-live-status strong {
+  font-size: 13px;
+}
+
+.moc-live-status small {
+  font-size: 11px;
+  color: #6a806f;
+  line-height: 1.5;
+}
+
+.moc-account-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #edf1ed;
+}
+
+.moc-account-avatar {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  background: #e7f3e9;
+  color: #34734c;
+}
+
+.moc-account-header > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.moc-account-header strong {
+  font-size: 14px;
+}
+
+.moc-account-header small {
+  color: #75877a;
+  font-size: 12px;
+}
+
+.moc-account-role {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  color: #34734c;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.moc-popover-action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+
+  width: 100%;
+  padding: 12px;
+  margin-top: 7px;
+
+  border: 0;
+  border-radius: 11px;
+  background: #f3f8f4;
+  color: #315a41;
+
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.moc-popover-action:hover {
+  background: #e6f1e8;
+  transform: translateX(2px);
+}
+
+.moc-logout-action {
+  color: #b43f3f;
+  background: #fff1f1;
+}
+
+.moc-logout-action:hover {
+  background: #ffe3e3;
+}
+
+@keyframes mocPopoverIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moc-header-popover {
+    animation: none;
+  }
+
+  .moc-header-button,
+  .moc-popover-action {
+    transition: none;
+  }
+}

@@ -1,0 +1,31 @@
+.ne-shell{display:grid;grid-template-columns:310px 1fr;gap:18px;align-items:start}.ne-tools,.ne-canvas-wrap{background:#fff;border:1px solid #e1e9df;border-radius:18px;padding:17px}.ne-tools>strong{font-size:16px;color:#2e6246}.ne-tools>p{font-size:12px;color:#74887b;line-height:1.7}.ne-buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:13px}.ne-buttons button{display:flex;gap:8px;align-items:center;background:#f6f9f5;color:#49745b;border:1px solid #e0e8db;border-radius:10px;padding:11px 9px;cursor:pointer;font-size:12px}.ne-buttons button.active{border-color:#318757;background:#e5f4e8;color:#226447;font-weight:800}.ne-select{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:700;color:#426651;margin-top:12px}.ne-select select{border:1px solid #cedecf;border-radius:10px;padding:10px;color:#215a40;background:#fff;width:100%}.ne-assigned{background:#f2f9f0;padding:9px;border-radius:10px;min-height:35px}.ne-actions{display:flex;flex-wrap:wrap;gap:7px;margin:13px 0}.ne-actions .btn{font-size:11px;flex:1}.ne-tools .full{display:flex;align-items:center;justify-content:center;gap:9px}.ne-status{background:#fff8e6;border-radius:8px;padding:9px}.ne-preview{display:block;text-align:center;margin:12px;color:#338558;font-weight:800;font-size:12px}.ne-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:13px;flex-wrap:wrap;color:#3c7151}.ne-heading span{font-size:12px;color:#849c8a}.ne-canvas{min-height:460px;aspect-ratio:1.4;max-height:640px;position:relative;overflow:hidden;border-radius:16px;background:linear-gradient(115deg,#eef7e9,#e3efdd);border:1px solid #dce9d6;cursor:crosshair;background-image:linear-gradient(#9dc4a022 1px,transparent 1px),linear-gradient(90deg,#9dc4a022 1px,transparent 1px);background-size:8% 8%}.ne-svg{position:absolute;width:100%;height:100%;inset:0;pointer-events:none}.ne-point{position:absolute;transform:translate(-50%,-50%);border:3px solid white;background:#3d8d68;color:white;font-size:10px;font-weight:800;width:29px;height:29px;border-radius:50%;z-index:5;cursor:pointer;box-shadow:0 4px 9px #204b3244}.ne-point.entrance{background:#214a36;width:35px;height:35px}.ne-point.chosen{outline:4px solid #a7e38e}.ne-hut{position:absolute;transform:translate(-50%,-50%);font-size:11px;font-weight:800;background:#fff;border:1px solid #86af91;border-radius:10px;color:#6a896e;padding:10px 8px;z-index:2;pointer-events:none}.ne-hut.active{background:#e4f5e4;border-color:#318757;color:#225b3e}.ne-note{font-size:11px;line-height:1.7;color:#809486;margin:15px 0 0}.ne-error{color:#be4444}@media(max-width:970px){.ne-shell{grid-template-columns:1fr}.ne-canvas{min-height:360px}.ne-tools{order:2}.ne-canvas-wrap{order:1}}
+
+
+/* Mộc Café - tuyến phát sáng động cho trang quản lý */
+.ne-route-caption { margin: -3px 0 10px; color: #8b7646; font-size: 12px; font-weight: 700; }
+.ne-route-caption--ready { color: #087341; }
+.ne-assigned--ready { background: #e4f8eb; color: #116b42 !important; }
+.ne-path-base { stroke: #a7b9aa; stroke-width: 1.6px; stroke-linecap: round; opacity: .6; }
+.ne-route-active polyline, .ne-route-active line {
+  fill: none; stroke-linecap: round; stroke-linejoin: round;
+  vector-effect: non-scaling-stroke; pointer-events: none;
+}
+.ne-route-glow { stroke: #57ef9f; stroke-width: 18px; opacity: .33; filter: drop-shadow(0 0 8px rgba(45, 227, 133, .7)); }
+.ne-route-border { stroke: #0c5939; stroke-width: 9px; opacity: .92; }
+.ne-route-line { stroke: #3be391; stroke-width: 6px; filter: drop-shadow(0 0 4px rgba(11, 158, 84, .6)); }
+.ne-route-flow { stroke: #fff; stroke-width: 2.6px; stroke-dasharray: 7 13; animation: ne-route-flow 1.05s linear infinite; }
+.ne-route-access { stroke: #24a65b; stroke-width: 3px; stroke-dasharray: 5 7; }
+.ne-point.on-route:not(.entrance) { background: #07894d; box-shadow: 0 0 0 5px #50e79755, 0 0 16px #18b86f; }
+.ne-point.entrance.on-route { box-shadow: 0 0 0 5px #4bea9955, 0 0 16px #18b86f; }
+.ne-hut { cursor: pointer; font: inherit; line-height: 1.2; pointer-events: auto; }
+.ne-hut:focus-visible { outline: 3px solid #23ae66; outline-offset: 3px; }
+.ne-hut.active.has-route { background: #14764c; color: #fff; z-index: 6; box-shadow: 0 0 0 6px rgba(55,234,139,.2), 0 0 24px rgba(7,190,103,.65); animation: ne-hut-glow 1.8s ease-in-out infinite; }
+@keyframes ne-route-flow { to { stroke-dashoffset: -20; } }
+@keyframes ne-hut-glow {
+  0%,100% { box-shadow: 0 0 0 5px rgba(55,234,139,.18), 0 0 12px rgba(7,190,103,.45); }
+  50% { box-shadow: 0 0 0 10px rgba(55,234,139,.13), 0 0 26px rgba(7,190,103,.7); }
+}
+@media (prefers-reduced-motion: reduce) { .ne-route-flow, .ne-hut.active.has-route { animation: none; } }
+
+/* Chế độ xem tuyến: chòi nằm trên các điểm lối đi vẫn bấm được; chế độ sửa thì ưu tiên điểm. */
+.ne-canvas--preview .ne-hut { z-index: 7; }

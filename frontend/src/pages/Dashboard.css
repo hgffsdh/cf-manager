@@ -1,0 +1,29 @@
+/* Cho phép toàn bộ thẻ thống kê bấm để điều hướng. */
+.metric-card-link {
+  display: block;
+  cursor: pointer;
+  color: inherit;
+  text-decoration: none;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.metric-card-link:hover {
+  transform: translateY(-4px);
+  border-color: #adcdb5;
+  box-shadow: 0 16px 35px rgba(28, 72, 50, .12);
+}
+.metric-card-link:focus-visible {
+  outline: 3px solid #347f5e;
+  outline-offset: 3px;
+}
+.metric-card-link .metric-link-arrow {
+  margin-left: auto;
+  opacity: .55;
+  transition: transform .2s ease, opacity .2s ease;
+}
+.metric-card-link:hover .metric-link-arrow {
+  transform: translate(2px, -2px);
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .metric-card-link, .metric-card-link .metric-link-arrow { transition: none; }
+}

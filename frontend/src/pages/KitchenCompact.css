@@ -1,0 +1,9 @@
+/* Compact finished-items area: approximately 54px per ticket, rather than a tall kanban card. */
+.compact-ready-column .kanban-body{padding:12px;display:flex;flex-direction:column;gap:8px}
+.compact-ready-chip{width:100%;min-height:56px;display:flex;align-items:center;gap:10px;border:1px solid #dce9de;background:#fff;border-radius:12px;padding:8px 10px;text-align:left;cursor:pointer;box-shadow:0 2px 8px #2d554008;transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}
+.compact-ready-chip:hover{transform:translateY(-2px);border-color:#9abda5;box-shadow:0 5px 17px #24583b18}
+.compact-ready-chip:focus-visible,.compact-order-number:focus-visible{outline:3px solid #75bd95;outline-offset:2px}
+.compact-ready-check{height:30px;width:30px;flex:none;display:grid;place-items:center;background:#e6f4e8;color:#3b9060;border-radius:9px}
+.compact-ready-info{min-width:0;display:flex;flex:1;flex-direction:column;gap:3px}.compact-ready-info strong{color:#264d37;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.compact-ready-info strong small{font-size:10px;color:#5e8b6b}.compact-ready-info>span{font-size:10px;color:#879f8b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.compact-ready-arrow{flex:none;color:#789b82}
+.compact-order-number{display:inline-flex;align-items:center;gap:5px;background:transparent;border:0;padding:0;color:#467e63;font-size:11px;font-weight:800;cursor:pointer}.compact-order-number:hover{text-decoration:underline}
+@media(prefers-reduced-motion:reduce){.compact-ready-chip{transition:none}.compact-ready-chip:hover{transform:none}}

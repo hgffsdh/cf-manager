@@ -1,0 +1,11 @@
+import { useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { CreditCard, CheckCircle2, XCircle, Leaf, ShieldCheck } from 'lucide-react';
+import { api, money, post } from '../lib/api';
+import { ErrorText, Status } from '../components/Layout';
+type Attempt = {referenceCode:string;requestedAmount:number;status:string;expiresAt:string;orderNumber:string};
+export default function DemoPay(){const {token=''}=useParams();const [message,setMessage]=useState('');const [error,setError]=useState('');const [busy,setBusy]=useState(false);const client=useQueryClient();const {data,error:loadError}=useQuery({queryKey:['demo-pay',token],queryFn:()=>api<Attempt>('/demo-pay/'+token,{},'public')});
+  const simulate=async(succeed:boolean)=>{setError('');setBusy(true);try{const d=await post<{message:string}>('/demo-pay/'+token,{succeed},'public');setMessage(d.message);client.invalidateQueries();}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}};
+  return <div className="pay-screen"><div className="pay-card"><div className="pay-brand"><Leaf size={29}/><span>Mộc Café</span></div><div className="demo-ribbon">MÔ PHỎNG — KHÔNG CHUYỂN TIỀN THẬT</div><div className="pay-symbol"><CreditCard size={38}/></div><p>Thanh toán đơn hàng</p><h2>{data?money(data.requestedAmount):'—'}</h2><div className="pay-refs"><div><span>Mã đơn</span><strong>{data?.orderNumber??'...'}</strong></div><div><span>Nội dung tham chiếu</span><strong>{data?.referenceCode??'...'}</strong></div><div><span>Trạng thái</span>{data?<Status value={data.status}/>:null}</div></div><ErrorText error={error||loadError}/>{message&&<div className="info-banner">{message}</div>}{data?.status!=='Succeeded'&&<div className="pay-buttons"><button className="btn btn-outline" disabled={!data||busy} onClick={()=>simulate(false)}><XCircle size={18}/> Thử thất bại</button><button className="btn btn-primary" disabled={!data||busy} onClick={()=>simulate(true)}><CheckCircle2 size={18}/> Thử thành công</button></div>}<div className="pay-safe"><ShieldCheck size={17}/> Đây chỉ là cổng thử nghiệm, không liên kết ngân hàng hoặc ví điện tử nào.</div></div></div>;
+}

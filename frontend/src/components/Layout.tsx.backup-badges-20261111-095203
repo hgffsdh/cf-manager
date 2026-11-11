@@ -1,0 +1,670 @@
+import { OrderBell, PendingOrderBadge, OrderDeepLink } from '../pages/OrderNotifications';
+
+import {
+  useEffect,
+  useRef,
+  useState
+} from 'react';
+
+import type {
+  ReactNode
+} from 'react';
+
+import {
+  NavLink,
+  Outlet,
+  useLocation,
+  useNavigate
+} from 'react-router-dom';
+
+import {
+  Activity,
+  CalendarDays,
+  ChartNoAxesCombined,
+  CheckCircle2,
+  ChefHat,
+  ChevronDown,
+  CircleDot,
+  ClipboardList,
+  Coffee,
+  ConciergeBell,
+  Boxes,
+  LayoutDashboard,
+  LogOut,
+  MapPinned,
+  Menu,
+  ShieldCheck,
+  UtensilsCrossed,
+  Users,
+  UserRound,
+  Wifi,
+  X
+} from 'lucide-react';
+
+import { ADMIN_TOKEN } from '../lib/api';
+import { isOwner } from '../lib/permissions';
+import { useRealtime } from '../lib/realtime';
+
+import './SidebarCollapse.css';
+
+// ============================================
+// NAVIGATION CONFIGURATION
+// ============================================
+
+const links = [
+  {
+    to: '/admin',
+    icon: LayoutDashboard,
+    title: 'Tổng quan',
+    end: true
+  },
+  {
+    to: '/admin/tables',
+    icon: MapPinned,
+    title: 'Sơ đồ chòi'
+  },
+  {
+    to: '/admin/orders',
+    icon: ClipboardList,
+    title: 'Đơn hàng'
+  },
+  {
+    to: '/admin/order-history?status=completed',
+    icon: ClipboardList,
+    title: 'Lịch sử đơn đã làm'
+  },
+  {
+    to: '/admin/kitchen',
+    icon: ChefHat,
+    title: 'Pha chế'
+  },
+  {
+    to: '/admin/service',
+    icon: ConciergeBell,
+    title: 'Phục vụ'
+  },
+  {
+    to: '/admin/menu',
+    icon: UtensilsCrossed,
+    title: 'Quản lý thực đơn'
+  },
+  {
+    to: '/admin/inventory',
+    icon: Boxes,
+    title: 'Kho nguyên liệu'
+  },
+  {
+    to: '/admin/team',
+    icon: Users,
+    title: 'Quản lý nhân viên'
+  },
+  {
+    to: '/admin/reservations',
+    icon: CalendarDays,
+    title: 'Đặt chòi'
+  },
+  {
+    to: '/admin/reports',
+    icon: ChartNoAxesCombined,
+    title: 'Báo cáo'
+  }
+];
+
+type HeaderPanel = 'live' | 'account' | null;
+
+// ============================================
+// MAIN LAYOUT
+// ============================================
+
+export function Layout() {
+  const owner = isOwner();
+
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Sidebar mặc định thu gọn
+  const [collapsed, setCollapsed] = useState(true);
+
+  // Menu mobile
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Header popovers
+  const [openPanel, setOpenPanel] =
+    useState<HeaderPanel>(null);
+
+  const headerActionsRef =
+    useRef<HTMLDivElement | null>(null);
+
+  // Giữ kết nối realtime như project gốc
+  useRealtime();
+
+  // Đóng menu khi chuyển trang
+  useEffect(() => {
+    setMobileOpen(false);
+    setOpenPanel(null);
+  }, [location.pathname, location.search]);
+
+  // Click ra ngoài sẽ đóng popup
+  useEffect(() => {
+    if (!openPanel) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (
+        headerActionsRef.current &&
+        !headerActionsRef.current.contains(
+          event.target as Node
+        )
+      ) {
+        setOpenPanel(null);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpenPanel(null);
+        setMobileOpen(false);
+      }
+    };
+
+    document.addEventListener(
+      'pointerdown',
+      handlePointerDown
+    );
+
+    document.addEventListener(
+      'keydown',
+      handleEscape
+    );
+
+    return () => {
+      document.removeEventListener(
+        'pointerdown',
+        handlePointerDown
+      );
+
+      document.removeEventListener(
+        'keydown',
+        handleEscape
+      );
+    };
+  }, [openPanel]);
+
+  // Đăng xuất
+  const logout = () => {
+    setOpenPanel(null);
+    setMobileOpen(false);
+
+    sessionStorage.removeItem(ADMIN_TOKEN);
+
+    navigate('/login', {
+      replace: true
+    });
+  };
+
+  // Chỉ Owner được thấy các mục quản lý riêng
+  const visibleLinks = links.filter(
+    (link) =>
+      owner ||
+      ![
+        '/admin/inventory',
+        '/admin/team',
+        '/admin/reports'
+      ].includes(link.to)
+  );
+
+  const togglePanel = (panel: Exclude<HeaderPanel, null>) => {
+    setOpenPanel((current) =>
+      current === panel ? null : panel
+    );
+  };
+
+  return (
+    <div
+      className={[
+        'app-shell',
+        'moc-shell',
+        collapsed ? 'moc-sidebar-collapsed' : '',
+        mobileOpen ? 'moc-mobile-open' : ''
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {/* ======================================
+          MOBILE BACKDROP
+      ====================================== */}
+
+      {mobileOpen && (
+        <button
+          type="button"
+          className="moc-sidebar-backdrop"
+          aria-label="Đóng menu"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* ======================================
+          SIDEBAR
+      ====================================== */}
+
+      <aside
+        className="sidebar"
+        aria-label="Menu quản lý"
+        onMouseEnter={() => setCollapsed(false)}
+        onMouseLeave={() => setCollapsed(true)}
+        onFocusCapture={() => setCollapsed(false)}
+        onBlurCapture={(event) => {
+          if (
+            !event.currentTarget.contains(
+              event.relatedTarget as Node | null
+            )
+          ) {
+            setCollapsed(true);
+          }
+        }}
+      >
+        {/* LOGO */}
+
+        <div className="moc-sidebar-heading">
+          <div className="logo">
+            <span className="logo-mark">
+              <Coffee size={26} />
+            </span>
+
+            <div>
+              <strong>Mộc Café</strong>
+              <small>GARDEN OS</small>
+            </div>
+          </div>
+
+          {/* Chỉ hiển thị trên mobile */}
+
+          <button
+            type="button"
+            className="moc-sidebar-close-mobile"
+            aria-label="Đóng thanh điều hướng"
+            onClick={() => setMobileOpen(false)}
+          >
+            <X size={21} />
+          </button>
+        </div>
+
+        {/* NAVIGATION LABEL */}
+
+        <div className="side-label">
+          KHÔNG GIAN LÀM VIỆC
+        </div>
+
+        {/* NAVIGATION LINKS */}
+
+        <nav className="side-links">
+          {visibleLinks.map(
+            ({ to, icon: Icon, title, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                title={collapsed ? title : undefined}
+                className={({ isActive }) =>
+                  `side-link ${
+                    isActive ? 'active' : ''
+                  }`
+                }
+              >
+                <Icon size={19} />
+
+                <span>
+                  {to === '/admin/menu' && !owner
+                    ? 'Báo hết món'
+                    : title}
+                </span>
+              {to === '/admin/orders' && <PendingOrderBadge />}</NavLink>
+            )
+          )}
+        </nav>
+
+        {/* SIDEBAR FOOTER */}
+
+        <div className="sidebar-bottom">
+          <div className="status-live">
+            <CircleDot size={16} />
+
+            <span>
+              Vận hành trực tuyến
+            </span>
+          </div>
+
+          <button
+            type="button"
+            className="side-link logout"
+            onClick={logout}
+            title="Đăng xuất"
+          >
+            <LogOut size={18} />
+
+            <span>Đăng xuất</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* ======================================
+          WORKSPACE
+      ====================================== */}
+
+      <div className="workspace">
+
+        {/* TOPBAR */}
+
+        <header className="topbar">
+          <div className="moc-topbar-start">
+            <button
+              type="button"
+              className="moc-mobile-trigger"
+              aria-label="Mở menu quản lý"
+              onClick={() => setMobileOpen(true)}
+            >
+              <Menu size={23} />
+            </button>
+
+            <span className="crumb">
+              Không gian quản lý
+            </span>
+
+            <span className="crumb-slash">
+              /
+            </span>
+
+            <b>Mộc Café Garden</b>
+          </div>
+
+          {/* INTERACTIVE HEADER ACTIONS */}
+
+          <div
+            className="top-actions moc-header-actions"
+            ref={headerActionsRef}
+          >
+            <OrderBell />
+            {/* LIVE BUTTON */}
+
+            <div className="moc-header-control">
+              <button
+                type="button"
+                className="live-pill moc-header-button"
+                aria-label="Xem trạng thái realtime"
+                aria-expanded={openPanel === 'live'}
+                onClick={() => togglePanel('live')}
+              >
+                <span className="pulse-dot" />
+                Live
+                <ChevronDown size={14} />
+              </button>
+
+              {openPanel === 'live' && (
+                <div
+                  className="moc-header-popover"
+                  role="region"
+                  aria-label="Trạng thái realtime"
+                >
+                  <div className="moc-popover-title">
+                    <Activity size={19} />
+                    Trung tâm realtime
+                  </div>
+
+                  <div className="moc-live-status">
+                    <Wifi size={18} />
+
+                    <div>
+                      <strong>
+                        Realtime đã được khởi tạo
+                      </strong>
+
+                      <small>
+                        Kết nối SignalR được quản lý
+                        bởi hệ thống.
+                      </small>
+                    </div>
+                  </div>
+
+                  <p>
+                    Hệ thống sử dụng SignalR để
+                    hỗ trợ cập nhật đơn hàng và
+                    các thay đổi vận hành theo
+                    thời gian thực.
+                  </p>
+
+                  <p className="moc-popover-note">
+                    Bảng này chưa kiểm tra trạng thái
+                    kết nối trực tiếp. Để hiển thị
+                    Connected / Reconnecting /
+                    Disconnected cần lấy trạng thái
+                    từ realtime.ts.
+                  </p>
+
+                  <button
+                    type="button"
+                    className="moc-popover-action"
+                    onClick={() => {
+                      setOpenPanel(null);
+                      navigate('/admin/orders');
+                    }}
+                  >
+                    <ClipboardList size={16} />
+                    Xem đơn hàng
+                  </button>
+
+                  <button
+                    type="button"
+                    className="moc-popover-action"
+                    onClick={() => setOpenPanel(null)}
+                  >
+                    <CheckCircle2 size={16} />
+                    Đóng bảng
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* ACCOUNT BUTTON */}
+
+            <div className="moc-header-control">
+              <button
+                type="button"
+                className="avatar moc-header-button"
+                aria-label="Mở menu tài khoản"
+                aria-expanded={openPanel === 'account'}
+                onClick={() => togglePanel('account')}
+              >
+                MC
+              </button>
+
+              {openPanel === 'account' && (
+                <div
+                  className="moc-header-popover"
+                  role="region"
+                  aria-label="Menu tài khoản"
+                >
+                  <div className="moc-account-header">
+                    <div className="moc-account-avatar">
+                      <Coffee size={23} />
+                    </div>
+
+                    <div>
+                      <strong>
+                        Mộc Café OS
+                      </strong>
+
+                      <small>
+                        {owner
+                          ? 'Tài khoản chủ quán'
+                          : 'Tài khoản nhân viên'}
+                      </small>
+                    </div>
+                  </div>
+
+                  <div className="moc-account-role">
+                    <ShieldCheck size={16} />
+
+                    <span>
+                      Vai trò: {
+                        owner ? 'Owner' : 'Nhân viên'
+                      }
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="moc-popover-action"
+                    onClick={() => {
+                      setOpenPanel(null);
+                      navigate('/admin');
+                    }}
+                  >
+                    <UserRound size={16} />
+                    Trang tổng quan
+                  </button>
+
+                  <button
+                    type="button"
+                    className="moc-popover-action moc-logout-action"
+                    onClick={logout}
+                  >
+                    <LogOut size={16} />
+                    Đăng xuất
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* MAIN CONTENT */}
+
+        <main className="main-content">
+          <Outlet />
+          <OrderDeepLink />
+        </main>
+
+        {/* FOOTER */}
+
+        <footer className="main-footer">
+          <ShieldCheck size={15} />
+
+          Mộc Café OS · Phần mềm vận hành quán cà phê
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// PAGE TITLE
+// ============================================
+
+export function PageTitle({
+  eyebrow,
+  title,
+  desc,
+  action
+}: {
+  eyebrow: string;
+  title: string;
+  desc?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="page-heading">
+      <div>
+        <div className="eyebrow">
+          {eyebrow}
+        </div>
+
+        <h1>{title}</h1>
+
+        {desc && <p>{desc}</p>}
+      </div>
+
+      {action && (
+        <div>{action}</div>
+      )}
+    </div>
+  );
+}
+
+// ============================================
+// EMPTY STATE
+// ============================================
+
+export function Empty({
+  message
+}: {
+  message: string;
+}) {
+  return (
+    <div className="empty-state">
+      <Coffee size={36} />
+      <p>{message}</p>
+    </div>
+  );
+}
+
+// ============================================
+// ERROR TEXT
+// ============================================
+
+export function ErrorText({
+  error
+}: {
+  error?: unknown;
+}) {
+  if (!error) return null;
+
+  return (
+    <div className="error-banner">
+      {String(
+        error instanceof Error
+          ? error.message
+          : error
+      )}
+    </div>
+  );
+}
+
+// ============================================
+// STATUS BADGE
+// ============================================
+
+export function Status({
+  value
+}: {
+  value: string;
+}) {
+  const map: Record<string, string> = {
+    Pending: 'Chờ tiếp nhận',
+    Accepted: 'Đã tiếp nhận',
+    Rejected: 'Đã từ chối',
+    NotReleased: 'Chờ pha chế',
+    Queued: 'Trong hàng chờ',
+    Preparing: 'Đang pha chế',
+    PartiallyReady: 'Xong một phần',
+    Ready: 'Đã sẵn sàng',
+    PartiallyServed: 'Phục vụ một phần',
+    Served: 'Đã phục vụ',
+    Unpaid: 'Chưa thanh toán',
+    Paid: 'Đã thanh toán',
+    Succeeded: 'Thành công',
+    Failed: 'Thất bại',
+    New: 'Mới'
+  };
+
+  const tone =
+    /Paid|Served|Accepted|Ready|Succeeded/.test(value)
+      ? 'success'
+      : /Failed|Rejected|Unpaid/.test(value)
+        ? 'danger'
+        : 'warning';
+
+  return (
+    <span className={`status status-${tone}`}>
+      {map[value] ?? value}
+    </span>
+  );
+}

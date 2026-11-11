@@ -1,0 +1,54 @@
+/* Sidebar work counters for Mộc Café OS (real API values). */
+.moc-shell .sidebar .side-link span.moc-work-badge {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, .12);
+  margin-left: auto;
+}
+.moc-shell .sidebar .side-link span.moc-work-badge + span.moc-work-badge {
+  margin-left: 3px;
+}
+.moc-shell .sidebar .side-link .moc-work-badge-red { background: #df3b3b; }
+.moc-shell .sidebar .side-link .moc-work-badge-amber { background: #d88b20; }
+.moc-shell .sidebar .side-link .moc-work-badge-green { background: #218653; }
+.moc-shell .sidebar .side-link .moc-work-badge-blue { background: #3a76b6; }
+.moc-shell .sidebar .side-link .moc-work-badge-error { background: #64748b; }
+
+/* The existing collapse stylesheet hides all spans with !important.
+   These more-specific selectors keep work badges visible on collapsed icons. */
+@media (min-width: 831px) {
+  .moc-shell.moc-sidebar-collapsed .sidebar .side-link {
+    position: relative;
+    overflow: visible;
+  }
+  .moc-shell.moc-sidebar-collapsed .sidebar .side-link span.moc-work-badge {
+    display: inline-flex !important;
+    position: absolute;
+    top: 2px;
+    right: 0;
+    height: 17px;
+    min-width: 17px;
+    font-size: 9px;
+    padding: 0 3px;
+    margin: 0;
+    border: 2px solid #fff;
+    z-index: 2;
+  }
+  .moc-shell.moc-sidebar-collapsed .sidebar .side-link span.moc-work-badge + span.moc-work-badge {
+    top: auto;
+    bottom: 1px;
+    right: 0;
+    margin: 0;
+  }
+}
