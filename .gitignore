@@ -1,4 +1,8 @@
-**/bin/
+# Backup va du lieu cuc bo
+backup-guest-bank-payment-*/
+backup-history-day-*/
+data-import/
+history-day-patch/**/bin/
 **/obj/
 **/node_modules/
 **/dist/
