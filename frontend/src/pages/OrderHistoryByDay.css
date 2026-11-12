@@ -1,0 +1,18 @@
+/* Mộc Café - daily service history */
+.moc-history-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin:12px 0 18px}
+.moc-history-summary>div{display:flex;align-items:center;gap:10px;border:1px solid #dbeadd;border-radius:17px;background:#fff;padding:18px;color:#3e8160}
+.moc-history-summary span{flex:1;color:#647d6c;font-size:12px;font-weight:650}.moc-history-summary strong{font-size:22px;color:#17543e}
+.moc-history-month{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:13px;color:#355c43;font-size:12px;font-weight:750}
+.moc-history-month input{border:1px solid #dce9de;background:white;color:#255c42;border-radius:10px;padding:10px 12px;font:inherit}
+.moc-history-month button{border:0;background:#e7f3ea;border-radius:10px;padding:10px 12px;cursor:pointer;color:#246644;font-weight:700}
+.moc-day-list{display:flex;flex-direction:column;gap:11px;margin-bottom:25px}
+.moc-day-card{border:1px solid #dce8df;border-radius:18px;background:white;overflow:hidden;box-shadow:0 5px 18px #254d3309}
+.moc-day-card-open{border-color:#8abc9d;box-shadow:0 8px 24px #1e563016}
+.moc-day-trigger{width:100%;display:flex;align-items:center;gap:15px;padding:17px 20px;border:0;background:white;color:#205840;cursor:pointer;text-align:left}
+.moc-day-trigger:hover,.moc-day-trigger:focus-visible{background:#f4f9f5}.moc-day-trigger:focus-visible{outline:2px solid #6fb68c;outline-offset:-2px}
+.moc-day-icon{display:grid;place-items:center;width:45px;height:45px;flex:none;background:#e8f3eb;border-radius:13px;color:#238357}
+.moc-day-title{display:flex;flex-direction:column;gap:5px;flex:1;min-width:0}.moc-day-title strong{font-size:15px;font-weight:850}.moc-day-title small{font-size:12px;color:#7b9881}
+.moc-day-total{font-size:14px;font-weight:850;white-space:nowrap}.moc-day-orders{padding:0 19px 16px;border-top:1px solid #e4efe6}
+.moc-day-note{margin:0;padding:0 20px 12px;font-size:11px;color:#9a703d;line-height:1.5}.moc-day-loading{padding:16px;color:#72907a;font-size:13px}
+@media(max-width:850px){.moc-history-summary{grid-template-columns:1fr}.moc-history-summary>div{padding:13px}.moc-day-trigger{padding:13px;gap:9px}.moc-day-icon{width:38px;height:38px}.moc-day-total{font-size:12px}.moc-day-orders{padding:0 10px 10px}}
+@media(max-width:480px){.moc-day-trigger{flex-wrap:wrap}.moc-day-title{flex-basis:calc(100% - 60px)}.moc-day-total{margin-left:47px}.moc-day-trigger>svg{margin-left:auto}}

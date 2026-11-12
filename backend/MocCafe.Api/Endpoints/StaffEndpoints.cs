@@ -137,7 +137,7 @@ public static class StaffEndpoints
         }).RequireAuthorization("AcceptOrders");
         api.MapGet("/kitchen", async (CafeDbContext db, string? station) =>
         {
-            var q = db.PreparationTasks.AsNoTracking().Where(t => !t.OrderItem.Order.IsDemo).Where(t => t.Status != "Served");
+            var q = db.PreparationTasks.AsNoTracking().Where(t => !t.OrderItem.Order.IsDemo).Where(t => t.OrderItem.ServedQuantity < t.OrderItem.Quantity);
             if (!string.IsNullOrEmpty(station))
             {
                 var stationId = await db.PreparationStations.Where(s => s.Code == station).Select(s => (Guid?)s.Id).FirstOrDefaultAsync();
@@ -192,6 +192,7 @@ public static class StaffEndpoints
             item.ServedQuantity += input.Quantity;
             var allServed = item.Order.Items.All(x => x.ServedQuantity == x.Quantity);
             item.Order.FulfillmentStatus = allServed ? "Served" : "PartiallyServed";
+            if (allServed && item.Order.ServedAt == null) item.Order.ServedAt = DateTime.UtcNow;
             Events.AddBoth(db, item.Order.VisitSessionId, allServed ? "OrderServed" : "OrderItemServed", new { item.OrderId, item.Id, quantity = input.Quantity });
             try { await db.SaveChangesAsync(); } catch (DbUpdateConcurrencyException) { return Results.Conflict(); }
             return Results.Ok(new { item.ServedQuantity, item.Order.FulfillmentStatus });

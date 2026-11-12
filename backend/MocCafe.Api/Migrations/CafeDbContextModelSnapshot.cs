@@ -331,6 +331,9 @@ namespace MocCafe.Api.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<DateTime?>("ServedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");

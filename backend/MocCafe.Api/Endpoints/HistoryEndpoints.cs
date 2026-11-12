@@ -90,6 +90,63 @@ public static class HistoryEndpoints
             return Results.Ok(new { order, payments });
         }).RequireAuthorization("OrdersView");
 
+        // MOC_DAILY_SERVED_HISTORY_V1: each fully served order belongs to the VN day it was served.
+        // Pre-upgrade served orders without ServedAt are grouped by CreatedAt, flagged as estimated.
+        api.MapGet("/order-history/served-days", async (CafeDbContext db) =>
+        {
+            var served = db.Orders.AsNoTracking().Where(o => !o.IsDemo && o.FulfillmentStatus == "Served");
+            var groups = await served
+                .GroupBy(o => (o.ServedAt ?? o.CreatedAt).AddHours(7).Date)
+                .Select(g => new
+                {
+                    Date = g.Key,
+                    OrderCount = g.Count(),
+                    TotalAmount = g.Sum(o => o.TotalAmount),
+                    EstimatedCount = g.Count(o => o.ServedAt == null)
+                })
+                .OrderByDescending(x => x.Date)
+                .ToListAsync();
+            var portions = await db.OrderItems.AsNoTracking()
+                .Where(i => !i.Order.IsDemo && i.Order.FulfillmentStatus == "Served")
+                .GroupBy(i => (i.Order.ServedAt ?? i.Order.CreatedAt).AddHours(7).Date)
+                .Select(g => new { Date = g.Key, Portions = g.Sum(i => i.Quantity) })
+                .ToListAsync();
+            var portionMap = portions.ToDictionary(x => x.Date, x => x.Portions);
+            return Results.Ok(groups.Select(g => new
+            {
+                date = g.Date.ToString("yyyy-MM-dd"),
+                g.OrderCount,
+                portions = portionMap.TryGetValue(g.Date, out var count) ? count : 0,
+                g.TotalAmount,
+                g.EstimatedCount
+            }));
+        }).RequireAuthorization("OrdersView");
+
+        api.MapGet("/order-history/served-day", async (CafeDbContext db, string date, int page = 1) =>
+        {
+            if (!System.DateOnly.TryParseExact(date, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None, out var vietnamDay))
+                return Results.BadRequest(new { message = "Ngày phải theo định dạng YYYY-MM-DD." });
+            page = Math.Clamp(page, 1, 10000);
+            var startUtc = vietnamDay.ToDateTime(TimeOnly.MinValue).AddHours(-7);
+            var endUtc = startUtc.AddDays(1);
+            var q = db.Orders.AsNoTracking().Where(o => !o.IsDemo && o.FulfillmentStatus == "Served")
+                .Where(o => (o.ServedAt ?? o.CreatedAt) >= startUtc && (o.ServedAt ?? o.CreatedAt) < endUtc);
+            var totalCount = await q.CountAsync();
+            var items = await q.OrderByDescending(o => o.ServedAt ?? o.CreatedAt)
+                .ThenByDescending(o => o.Id)
+                .Skip((page - 1) * 20).Take(20)
+                .Select(o => new
+                {
+                    o.Id, o.OrderNumber, o.CreatedAt, o.ServedAt, o.TotalAmount, o.IsDemo,
+                    o.AcceptanceStatus, o.FulfillmentStatus, o.PaymentStatus, o.PaymentMethod,
+                    table = o.VisitSession.Table.Name,
+                    itemCount = o.Items.Sum(i => i.Quantity),
+                    isEstimated = o.ServedAt == null
+                })
+                .ToListAsync();
+            return Results.Ok(new { items, totalCount, page, pageSize = 20 });
+        }).RequireAuthorization("OrdersView");
         // Payment allocations, not payment totals: one payment can cover multiple orders.
         api.MapGet("/payment-history", async (CafeDbContext db, int days = 7, int page = 1) =>
         {

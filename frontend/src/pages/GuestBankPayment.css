@@ -1,0 +1,31 @@
+/* Mộc Café – bank transfer status (guest) */
+.moc-bank-paid-panel {
+  padding: 22px 18px;
+  border: 1px solid #bbdfc9;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #ecf8ef 0%, #ffffff 85%);
+  color: #194f37;
+  text-align: center;
+}
+.moc-bank-paid-panel svg { color: #259263; }
+.moc-bank-paid-panel h3 { margin: 12px 0 8px; color: #165035; font-size: 1.3rem; }
+.moc-bank-paid-panel p { margin: 8px 0; line-height: 1.6; }
+.moc-bank-paid-panel .moc-bank-paid-subtitle { color: #587365; font-weight: 600; }
+.moc-bank-paid-panel .moc-bank-paid-close { margin-top: 14px; }
+.moc-order-paid-note {
+  border: 1px solid #cfe8d9;
+  border-radius: 12px;
+  background: #f2faf5;
+  padding: 12px 14px;
+  color: #1b6748;
+  font-size: 13px;
+  line-height: 1.6;
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  margin: 12px 0;
+}
+.moc-order-paid-note svg { flex-shrink: 0; margin-top: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .moc-bank-paid-panel, .moc-order-paid-note { animation: none !important; }
+}

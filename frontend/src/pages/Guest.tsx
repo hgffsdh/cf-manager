@@ -1,19 +1,37 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
-import { MapPinned, Coffee, CreditCard, Minus, Plus, ShoppingBag, Sparkles, X, ConciergeBell, ArrowRight, BellRing, Copy, Wallet } from 'lucide-react';
+import { MapPinned, Coffee, CreditCard, Minus, Plus, ShoppingBag, Sparkles, X, ConciergeBell, ArrowRight, BellRing, Copy, Wallet, CheckCircle2 } from 'lucide-react';
 import { api, getGuestToken, GUEST_TOKEN, MenuCategory, MenuProduct, money, post, when } from '../lib/api';
 import { Empty, ErrorText, Status } from '../components/Layout';
 import { useRealtime } from '../lib/realtime';
+import './GuestBankPayment.css';
 type CartItem = {variantId:string;modifierOptionIds:string[];quantity:number;note:string;name:string;variantName:string;unitPrice:number;optionNames:string[];imageUrl?:string};
 type GuestInfo = {tableName:string;isDemo:boolean;visitId:string;tableId?:string};
 type BankInfo = {orderNumber:string;paymentStatus:string;bank:{bankId:string;accountNo:string;accountName:string;amount:number;referenceCode:string;qrImageUrl:string;instruction:string}};
 type GuestOrder = {id:string;orderNumber:string;createdAt:string;acceptanceStatus:string;fulfillmentStatus:string;paymentStatus:string;paymentMethod:string;totalAmount:number;items:{id:string;productName:string;quantity:number;readyQuantity:number;servedQuantity:number}[]};
+// MOC_BANK_SUCCESS_PATCH_V1: show the REAL fulfillment state after confirmed payment.
+function mocBankFulfillmentMessage(order?: GuestOrder): string {
+  if (!order || order.acceptanceStatus === 'Pending') {
+    return 'Quán đã được thông báo. Đơn đang chờ nhân viên xác nhận trước khi pha chế.';
+  }
+  if (order.acceptanceStatus === 'Rejected' || order.fulfillmentStatus === 'Cancelled') {
+    return 'Đơn đã bị từ chối hoặc hủy. Vui lòng liên hệ nhân viên để được hỗ trợ.';
+  }
+  if (order.fulfillmentStatus === 'Served') return 'Các món đã được mang ra bàn. Chúc bạn ngon miệng!';
+  if (order.fulfillmentStatus === 'Ready' || order.fulfillmentStatus === 'PartiallyReady') {
+    return 'Món đã sẵn sàng một phần hoặc toàn bộ. Nhân viên sẽ mang ra cho bạn.';
+  }
+  if (order.fulfillmentStatus === 'Preparing') return 'Quán đang pha chế món của bạn.';
+  if (order.fulfillmentStatus === 'PartiallyServed') return 'Một phần món đã được phục vụ, quán đang hoàn tất các món còn lại.';
+  return 'Đơn đã được xác nhận và đang trong hàng chờ pha chế.';
+}
+
 function GuestInside({info,qr}:{info:GuestInfo;qr:string}) {
   const [cart,setCart]=useState<CartItem[]>(()=>{try{return JSON.parse(localStorage.getItem('moc.cart.'+qr)||'[]');}catch{return [];}}); const [product,setProduct]=useState<MenuProduct|null>(null); const [variant,setVariant]=useState('');const [options,setOptions]=useState<string[]>([]);const [qty,setQty]=useState(1);const [note,setNote]=useState(''); const [tab,setTab]=useState('menu');const [payMethod,setPayMethod]=useState<'Cash'|'BankTransfer'>('Cash');const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [banner,setBanner]=useState('');const [bankOrderId,setBankOrderId]=useState<string|null>(null); const keyRef=useRef<string|null>(null); const client=useQueryClient();
   const {data:menu,error:menuError}=useQuery({queryKey:['menu'],queryFn:()=>api<MenuCategory[]>('/guest/menu',{},'public')});
   const {data:payOptions}=useQuery({queryKey:['guest-payment-options',info.visitId],queryFn:()=>api<{cash:boolean;bankTransfer:boolean}>('/guest/payment-options',{},'guest')});
-  const {data:orders}=useQuery({queryKey:['guest-orders',info.visitId],queryFn:()=>api<GuestOrder[]>('/guest/orders',{},'guest')});
+  const {data:orders}=useQuery({queryKey:['guest-orders',info.visitId],queryFn:()=>api<GuestOrder[]>('/guest/orders',{},'guest'),refetchInterval:10000});
   useRealtime(true,(type,event)=>{
     if (type==='OrderReady'||type==='OrderItemReady') {
       const k='moc.seen.'+event.eventId;
@@ -46,6 +64,35 @@ function GuestInside({info,qr}:{info:GuestInfo;qr:string}) {
   };
   const {data:bankData,error:bankError}=useQuery({queryKey:['guest-bank-info',bankOrderId],
     queryFn:()=>api<BankInfo>(`/guest/orders/${bankOrderId}/bank-details`,{},'guest'),enabled:!!bankOrderId,refetchInterval:15000});
+  // Prefer the server-confirmed Paid status from either guest endpoint.
+  const trackedBankOrder = orders?.find(o => o.id === bankOrderId);
+  const bankConfirmedPaid = Boolean(bankOrderId && (
+    trackedBankOrder?.paymentStatus === 'Paid' || bankData?.paymentStatus === 'Paid'
+  ));
+  const paidNotifiedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!bankOrderId || !bankConfirmedPaid || paidNotifiedRef.current === bankOrderId) return;
+    paidNotifiedRef.current = bankOrderId;
+    setBanner('✅ Thanh toán chuyển khoản thành công! ' + mocBankFulfillmentMessage(trackedBankOrder));
+    setTab('orders');
+  }, [bankOrderId, bankConfirmedPaid, trackedBankOrder?.acceptanceStatus, trackedBankOrder?.fulfillmentStatus]);
+
+  // Also notify if the customer closed the QR panel before the cashier confirmed.
+  const previouslyObservedPaymentsRef = useRef<Record<string,string>>({});
+  useEffect(() => {
+    if (!orders) return;
+    for (const order of orders) {
+      const previous = previouslyObservedPaymentsRef.current[order.id];
+      previouslyObservedPaymentsRef.current[order.id] = order.paymentStatus;
+      if (order.paymentMethod !== 'BankTransfer' || previous === undefined ||
+          previous === 'Paid' || order.paymentStatus !== 'Paid' ||
+          paidNotifiedRef.current === order.id) continue;
+      paidNotifiedRef.current = order.id;
+      setBanner('✅ Thanh toán chuyển khoản thành công! ' + mocBankFulfillmentMessage(order));
+      setTab('orders');
+    }
+  }, [orders]);
+
   const reportTransfer=async(orderId:string)=>{setError('');try{
     const result=await post<{message:string}>(`/guest/orders/${orderId}/notify-transfer`,{},'guest');
     setBanner(result.message);void client.invalidateQueries({queryKey:['guest-orders',info.visitId]});
@@ -54,22 +101,33 @@ function GuestInside({info,qr}:{info:GuestInfo;qr:string}) {
   return <div className="guest-screen"><header className="guest-header"><div className="guest-logo"><Coffee size={25}/><strong>Mộc Café</strong></div><div className="guest-table">ĐANG PHỤC VỤ · {info.tableName}</div><Link className="wh-nav-link" to={info.tableId ? `/chon-choi?table=${info.tableId}&back=${encodeURIComponent('/g/'+qr)}` : `/chon-choi?back=${encodeURIComponent('/g/'+qr)}`}><MapPinned size={16}/> Chỉ đường đến chòi</Link></header><div className="guest-hero"><div className="eyebrow light">WELCOME TO MỘC GARDEN</div><h1>Một chút cà phê,<br/><i>một chút bình yên.</i></h1><p>Chọn món bạn thích. Mộc sẽ chăm chút phần còn lại.</p><span className="guest-hero-icon">☕</span></div><div className="guest-tabs"><button className={tab==='menu'?'active':''} onClick={()=>setTab('menu')}>Thực đơn</button><button className={tab==='cart'?'active':''} onClick={()=>setTab('cart')}>Giỏ hàng {count>0&&<b>{count}</b>}</button><button className={tab==='orders'?'active':''} onClick={()=>setTab('orders')}>Đơn của tôi {orders?.length?`(${orders.length})`:''}</button></div><div className="guest-content">{banner&&<div className="guest-alert"><BellRing className="bell-shake" size={22}/><span>{banner}</span><button onClick={()=>setBanner('')}><X size={17}/></button></div>}{info.isDemo&&<div className="demo-notice">Đây là phiên thử nghiệm cũ. Hãy yêu cầu nhân viên đóng phiên và mở một phiên phục vụ thật để gọi món mới.</div>}<ErrorText error={error||menuError}/>
     {tab==='menu'&&<><div className="guest-title"><span>KHÁM PHÁ HƯƠNG VỊ</span><h2>Thực đơn của Mộc</h2></div>{menu?.map((cat,index)=><section className="menu-category" key={cat.id}><h3>{cat.name} <small>{cat.products.length} món</small></h3><div className="menu-grid">{cat.products.map((p,i)=><button className="menu-item" disabled={p.isSoldOut} key={p.id} onClick={()=>choose(p)}><span className={`menu-visual visual-${index}`}>{p.imageUrl?<img src={p.imageUrl} alt={p.name} className="menu-photo" loading="lazy"/>:index===2?['🥐','🍰','🍪'][i%3]:index===1?['🍑','🍹','🍵','🥭'][i%4]:['☕','🧋','🥛','☕'][i%4]}</span><div><strong>{p.name}</strong><span>{p.description}</span><b>{money(Math.min(...p.variants.map(v=>v.price)))}</b></div><span className="menu-add">{p.isSoldOut?'Hết món':<Plus size={19}/>}</span></button>)}</div></section>)}</>}
     {tab==='cart'&&<><div className="guest-title"><span>MÓN BẠN ĐÃ CHỌN</span><h2>Giỏ hàng của bạn</h2></div>{cart.length? <><div className="cart-list">{cart.map((x,i)=><div className="cart-line" key={i}><div className="cart-icon">{x.imageUrl?<img src={x.imageUrl} alt={x.name} className="menu-photo"/>:'☕'}</div><div className="grow"><strong>{x.name}</strong><span>Size {x.variantName}{x.optionNames.length?' · '+x.optionNames.join(', '):''}</span>{x.note&&<small>{x.note}</small>}<b>{money(x.unitPrice*x.quantity)}</b></div><div className="qty-control"><button onClick={()=>{setCart(old=>old.filter((_,idx)=>idx!==i));keyRef.current=null;}}><X size={15}/></button><span>x{x.quantity}</span></div></div>)}</div><div className="checkout-panel"><div className="checkout-total"><span>Tạm tính</span><b>{money(subtotal)}</b></div><div className="checkout-total grand"><span>Tổng thanh toán</span><b>{money(subtotal)}</b></div><h3>Phương thức thanh toán</h3><div className="pay-choices"><button className={payMethod==='Cash'?'selected':''} onClick={()=>{setPayMethod('Cash');keyRef.current=null;}}><Wallet size={21}/><b>Tiền mặt</b><small>Thanh toán tại quán</small></button>{payOptions?.bankTransfer&&<button className={payMethod==='BankTransfer'?'selected':''} onClick={()=>{setPayMethod('BankTransfer');keyRef.current=null;}}><CreditCard size={21}/><b>Chuyển khoản ngân hàng</b><small>Thanh toán thật · chờ đối soát</small></button>}</div>{!payOptions?.bankTransfer&&<p className="fine-print">Chuyển khoản sẽ xuất hiện khi quản lý cấu hình tài khoản nhận tiền thật. Bạn vẫn có thể thanh toán tiền mặt.</p>}<button className="btn btn-primary full checkout-button" disabled={busy||info.isDemo} onClick={place}>{busy?'Đang gửi đơn...':'Gửi đơn đến quán'} <ArrowRight size={20}/></button></div></>:<Empty message="Giỏ hàng đang trống. Hãy chọn một món thật ngon nhé!"/>}</>}
-    {tab==='orders'&&<><div className="guest-title"><span>THEO DÕI PHỤC VỤ</span><h2>Đơn của bạn</h2></div>{bankOrderId&&<div className="demo-action" style={{textAlign:'center'}}>
-      <strong>Thông tin chuyển khoản ngân hàng</strong>
-      <p>Đây là giao dịch THẬT. Chỉ chuyển tiền tới tài khoản của quán và giữ lại chứng từ.</p>
-      <ErrorText error={bankError}/>
-      {bankData&&<>
-        <div className="demo-qr"><img src={bankData.bank.qrImageUrl} alt="VietQR chuyển khoản thật tới tài khoản của quán" style={{maxWidth:'100%',maxHeight:330,borderRadius:10}}/></div>
-        <p><b>{bankData.bank.accountName}</b> · Ngân hàng {bankData.bank.bankId}</p>
-        <p>Số tài khoản: <b>{bankData.bank.accountNo}</b> <button type="button" onClick={()=>void navigator.clipboard.writeText(bankData.bank.accountNo)}><Copy size={15}/></button></p>
-        <p>Chuyển đúng <b>{money(bankData.bank.amount)}</b></p>
-        <p>Nội dung chuyển khoản: <b>{bankData.bank.referenceCode}</b> <button type="button" onClick={()=>void navigator.clipboard.writeText(bankData.bank.referenceCode)}><Copy size={15}/></button></p>
-        <p style={{fontWeight:600}}>QR KHÔNG tự xác nhận đã nhận tiền. Quán sẽ đối chiếu sao kê trước khi cập nhật Paid.</p>
-        {bankData.paymentStatus!=='Paid'&&<button className="btn btn-outline" onClick={()=>void reportTransfer(bankOrderId)}>Tôi đã chuyển · Yêu cầu nhân viên kiểm tra</button>}
-        {bankData.paymentStatus==='Paid'&&<p>Đã được thu ngân xác nhận nhận tiền.</p>}
+    {tab==='orders'&&<><div className="guest-title"><span>THEO DÕI PHỤC VỤ</span><h2>Đơn của bạn</h2></div>{bankOrderId && <div className="demo-action" style={{textAlign:'center'}}>
+      {bankConfirmedPaid ? <div className="moc-bank-paid-panel" role="status" aria-live="polite">
+        <CheckCircle2 size={48} aria-hidden="true" />
+        <h3>Thanh toán thành công!</h3>
+        <p>Quán đã xác nhận nhận tiền chuyển khoản cho đơn <strong>{trackedBankOrder?.orderNumber ?? bankData?.orderNumber ?? ''}</strong>.</p>
+        <p className="moc-bank-paid-subtitle">{mocBankFulfillmentMessage(trackedBankOrder)}</p>
+        <button type="button" className="btn btn-outline moc-bank-paid-close" onClick={() => setBankOrderId(null)}>Đóng thông báo</button>
+      </div> : <>
+        <strong>Thông tin chuyển khoản ngân hàng</strong>
+        <p>Vui lòng chuyển đúng số tiền và nội dung. Chỉ nhân viên sau khi đối chiếu sao kê mới được xác nhận đã thu.</p>
+        <ErrorText error={bankError}/>
+        {bankData && <>
+          <div className="demo-qr"><img src={bankData.bank.qrImageUrl} alt="VietQR thanh toán" style={{maxWidth:'100%',maxHeight:330,borderRadius:10}}/></div>
+          <p><b>{bankData.bank.accountName}</b> · Ngân hàng {bankData.bank.bankId}</p>
+          <p>Số tài khoản: <b>{bankData.bank.accountNo}</b> <button type="button" onClick={() => void navigator.clipboard.writeText(bankData.bank.accountNo)}><Copy size={15}/></button></p>
+          <p>Chuyển đúng <b>{money(bankData.bank.amount)}</b></p>
+          <p>Nội dung chuyển khoản: <b>{bankData.bank.referenceCode}</b> <button type="button" onClick={() => void navigator.clipboard.writeText(bankData.bank.referenceCode)}><Copy size={15}/></button></p>
+          <p>Đang chờ nhân viên xác minh tiền đã vào tài khoản của quán.</p>
+          <button type="button" className="btn btn-outline" onClick={() => void reportTransfer(bankOrderId)}>Tôi đã chuyển · Yêu cầu nhân viên kiểm tra</button>
+        </>}
+        <button type="button" className="btn btn-outline" onClick={() => setBankOrderId(null)}>Thu gọn mã chuyển khoản</button>
       </>}
-      <button className="btn btn-outline" onClick={()=>setBankOrderId(null)}>Thu gọn thông tin thanh toán</button>
-    </div>}{orders?.map(o=><div className="guest-order" key={o.id}><div className="guest-order-head"><strong>{o.orderNumber}</strong><span>{when(o.createdAt)}</span></div><div className="guest-order-tags"><Status value={o.acceptanceStatus}/><Status value={o.fulfillmentStatus}/><Status value={o.paymentStatus}/></div>{o.items.map(i=><div className="guest-item-status" key={i.id}><span>{i.quantity}× {i.productName}</span><span>Xong {i.readyQuantity}/{i.quantity} · Đã mang {i.servedQuantity}</span></div>)}<div className="guest-order-total">Tổng đơn <strong>{money(o.totalAmount)}</strong></div></div>)}{orders?.filter(o=>o.paymentMethod==='BankTransfer'&&o.paymentStatus!=='Paid'&&o.acceptanceStatus!=='Rejected').map(o=><button className="btn btn-outline" key={'bank-'+o.id} onClick={()=>setBankOrderId(o.id)}>Xem mã chuyển khoản thật cho {o.orderNumber}</button>)}{!orders?.length&&<Empty message="Bạn chưa gửi đơn nào trong phiên này."/>}</>}
+    </div>}{orders?.map(o=><div className="guest-order" key={o.id}><div className="guest-order-head"><strong>{o.orderNumber}</strong><span>{when(o.createdAt)}</span></div><div className="guest-order-tags"><Status value={o.acceptanceStatus}/><Status value={o.fulfillmentStatus}/><Status value={o.paymentStatus}/></div>{o.items.map(i=><div className="guest-item-status" key={i.id}><span>{i.quantity}× {i.productName}</span><span>Xong {i.readyQuantity}/{i.quantity} · Đã mang {i.servedQuantity}</span></div>)}{o.paymentMethod === 'BankTransfer' && o.paymentStatus === 'Paid' &&
+        <div className="moc-order-paid-note" role="status"><CheckCircle2 size={18} aria-hidden="true" />
+          <span><strong>Đã thanh toán chuyển khoản.</strong> {mocBankFulfillmentMessage(o)}</span>
+        </div>}
+        <div className="guest-order-total">Tổng đơn <strong>{money(o.totalAmount)}</strong></div></div>)}{orders?.filter(o=>o.paymentMethod==='BankTransfer'&&o.paymentStatus!=='Paid'&&o.acceptanceStatus!=='Rejected').map(o=><button className="btn btn-outline" key={'bank-'+o.id} onClick={()=>setBankOrderId(o.id)}>Xem mã chuyển khoản thật cho {o.orderNumber}</button>)}{!orders?.length&&<Empty message="Bạn chưa gửi đơn nào trong phiên này."/>}</>}
     <div className="guest-support"><h3>Cần thêm hỗ trợ?</h3><p>Nhân viên của Mộc luôn sẵn sàng giúp bạn.</p><div><button onClick={()=>requestSupport('CallStaff')}><ConciergeBell size={20}/> Gọi nhân viên</button><button onClick={()=>requestSupport('Water')}>💧 Xin thêm nước</button><button onClick={()=>requestSupport('Payment')}><CreditCard size={20}/> Yêu cầu thanh toán</button></div></div></div>{tab==='menu'&&count>0&&<button className="floating-cart" onClick={()=>setTab('cart')}><ShoppingBag size={21}/> Giỏ hàng · {count} món <strong>{money(subtotal)}</strong><ArrowRight size={20}/></button>}
     {product&&<div className="overlay" onClick={()=>setProduct(null)}><div className="dialog product-dialog" onClick={e=>e.stopPropagation()}><button className="close" onClick={()=>setProduct(null)}><X size={20}/></button><div className="product-art">{product.imageUrl?<img src={product.imageUrl} alt={product.name} className="menu-photo"/>:'☕'}</div><h2>{product.name}</h2><p>{product.description}</p><label>Chọn size</label><div className="size-choice">{product.variants.map(v=><button className={v.id===variant?'on':''} key={v.id} onClick={()=>setVariant(v.id)}>{v.name}<small>{money(v.price)}</small></button>)}</div>{product.modifierGroups.map(g=><div key={g.id}><label>{g.name} <small>(tối đa {g.maxSelections})</small></label><div className="topping-options">{g.options.map(o=><label key={o.id}><input type="checkbox" checked={options.includes(o.id)} onChange={e=>setOptions(old=>e.target.checked?[...old,o.id]:old.filter(x=>x!==o.id))}/><span>{o.name}</span><b>+{money(o.price)}</b></label>)}</div></div>)}<label>Ghi chú cho quán</label><input value={note} onChange={e=>setNote(e.target.value)} placeholder="Ít đá, ít ngọt..."/><div className="add-product-footer"><div className="quantity"><button onClick={()=>setQty(v=>Math.max(1,v-1))}><Minus size={17}/></button><strong>{qty}</strong><button onClick={()=>setQty(v=>Math.min(30,v+1))}><Plus size={17}/></button></div><button className="btn btn-primary" onClick={add}><Plus size={18}/> Thêm vào giỏ</button></div></div></div>}
     <footer className="guest-footer"><Sparkles size={16}/> Made with care by Mộc Café</footer></div>;
