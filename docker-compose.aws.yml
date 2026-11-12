@@ -1,0 +1,65 @@
+# Mộc Café OS — AWS EC2 deployment (separate from the development/demo compose).
+# SQL Server data is stored in a named Docker volume. DO NOT remove volumes to redeploy.
+# Usage: sudo docker compose --env-file .env.aws -f docker-compose.aws.yml config
+#        sudo docker compose --env-file .env.aws -f docker-compose.aws.yml up -d db
+name: moccafe-aws
+
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: 'Y'
+      MSSQL_PID: Express
+      MSSQL_SA_PASSWORD: ${SQL_SA_PASSWORD:?Set SQL_SA_PASSWORD in .env.aws}
+    volumes:
+      - mssql-data:/var/opt/mssql
+    restart: unless-stopped
+    # Deliberately NO host port for SQL Server. Only Docker-network access.
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: '8080'
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: 'true'
+      ConnectionStrings__DefaultConnection: 'Server=db,1433;Database=MocCafeDB;User Id=sa;Password=${SQL_SA_PASSWORD};Encrypt=True;TrustServerCertificate=True;'
+      Jwt__Key: ${JWT_SECRET:?Set JWT_SECRET in .env.aws}
+      Jwt__Issuer: MocCafe
+      Jwt__Audience: MocCafeWeb
+      PublicFrontendUrl: ${PUBLIC_FRONTEND_URL:?Set PUBLIC_FRONTEND_URL}
+      Cors__Origins: ${PUBLIC_FRONTEND_URL:?Set PUBLIC_FRONTEND_URL}
+      Bootstrap__EnsureCreated: 'false'
+      Seed__Enabled: 'false'
+    depends_on:
+      - db
+    restart: unless-stopped
+    # Deliberately NO public host port for the API; Nginx proxies /api/ and /hubs/.
+
+  frontend:
+    build:
+      context: ./frontend
+    depends_on:
+      - backend
+    restart: unless-stopped
+    # Uses the project's existing nginx.conf to proxy /api/ and /hubs/.
+
+  caddy:
+    image: caddy:2-alpine
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?Set SITE_ADDRESS in .env.aws}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    ports:
+      - '80:80'
+      - '443:443'
+    depends_on:
+      - frontend
+    restart: unless-stopped
+
+volumes:
+  mssql-data:
+  caddy-data:
+  caddy-config:

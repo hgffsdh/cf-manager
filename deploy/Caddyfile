@@ -1,0 +1,6 @@
+# HTTP-only initial smoke test: SITE_ADDRESS=:80
+# HTTPS with DNS set up: SITE_ADDRESS=your-domain.example
+{$SITE_ADDRESS} {
+    encode zstd gzip
+    reverse_proxy frontend:80
+}
