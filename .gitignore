@@ -13,3 +13,23 @@ history-day-patch/**/bin/
 **/appsettings.Local.json
 *.user
 *.suo
+# .NET build output
+**/bin/
+**/obj/
+
+# Temporary patches
+history-day-patch/
+
+# Local backups
+backup-guest-bank-payment-*/
+backup-history-day-*/
+
+# Local imported data
+data-import/
+# AWS private keys
+*.pem
+*.key
+.secrets/
+
+# Deployment secrets
+.env.aws
